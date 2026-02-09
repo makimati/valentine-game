@@ -758,22 +758,37 @@
       }
 
       function resizeCanvas() {
-        const container = document.getElementById("game-container");
-        const header = container.querySelector(".game-header");
-        const progress = container.querySelector(".progress-container");
-        const shooter = container.querySelector(".shooter-area");
+  const container = document.getElementById("game-container");
+  const header = container.querySelector(".game-header");
+  const progress = container.querySelector(".progress-container");
+  const shooter = container.querySelector(".shooter-area");
 
-        const headerHeight = header?.offsetHeight || 0;
-        const progressHeight = progress?.offsetHeight || 0;
-        const shooterHeight = shooter?.offsetHeight || 0;
+  const headerHeight = header?.offsetHeight || 0;
+  const progressHeight = progress?.offsetHeight || 0;
+  const shooterHeight = shooter?.offsetHeight || 0;
 
-        canvas.width = Math.min(500, window.innerWidth);
-        canvas.height =
-          window.innerHeight - headerHeight - progressHeight - shooterHeight;
+  // Taille d'affichage
+  const displayWidth = Math.min(500, window.innerWidth);
+  const displayHeight =
+    window.innerHeight - headerHeight - progressHeight - shooterHeight;
 
-        // Adjust bubble radius for smaller screens
-        CONFIG.bubbleRadius = Math.min(20, Math.floor(canvas.width / 22));
-      }
+  // Ratio de pixels pour écrans haute densité
+  const dpr = window.devicePixelRatio || 1;
+
+  // Taille réelle du canvas (avec DPI)
+  canvas.width = displayWidth * dpr;
+  canvas.height = displayHeight * dpr;
+
+  // Taille d'affichage CSS
+  canvas.style.width = displayWidth + "px";
+  canvas.style.height = displayHeight + "px";
+
+  // Scale le contexte pour compenser le DPI
+  ctx.scale(dpr, dpr);
+
+  // Adjust bubble radius for smaller screens (basé sur displayWidth, pas canvas.width)
+  CONFIG.bubbleRadius = Math.min(20, Math.floor(displayWidth / 22));
+}
 
       // ============== SCREENS ==============
       function startGame() {
@@ -943,8 +958,8 @@
 
       // ============== BUBBLE GRID ==============
       function createBubbleGrid(rows) {
-        const cols = Math.floor(canvas.width / (CONFIG.bubbleRadius * 2));
-
+const displayWidth = canvas.width / (window.devicePixelRatio || 1);
+  const cols = Math.floor(displayWidth / (CONFIG.bubbleRadius * 2));
         for (let row = 0; row < rows; row++) {
           const isOffset = row % 2 === 1;
           const actualCols = isOffset ? cols - 1 : cols;
@@ -967,23 +982,24 @@
         }
       }
 
-      function createShooterBubble() {
-        if (nextBubbleData) {
-          shooterBubble = {
-            x: canvas.width / 2,
-            y: canvas.height - 35,
-            ...nextBubbleData,
-          };
-        } else {
-          const colorIndex = Math.floor(Math.random() * CONFIG.colors.length);
-          shooterBubble = {
-            x: canvas.width / 2,
-            y: canvas.height - 35,
-            color: CONFIG.colors[colorIndex],
-            emoji: CONFIG.emojis[colorIndex],
-            colorIndex,
-          };
-        }
+      const displayWidth = canvas.width / (window.devicePixelRatio || 1);
+  
+  if (nextBubbleData) {
+    shooterBubble = {
+      x: displayWidth / 2,  // ← Change ici
+      y: (canvas.height / (window.devicePixelRatio || 1)) - 35,  // ← Et ici
+      ...nextBubbleData,
+    };
+  } else {
+    const colorIndex = Math.floor(Math.random() * CONFIG.colors.length);
+    shooterBubble = {
+      x: displayWidth / 2,  // ← Change ici
+      y: (canvas.height / (window.devicePixelRatio || 1)) - 35,  // ← Et ici
+      color: CONFIG.colors[colorIndex],
+      emoji: CONFIG.emojis[colorIndex],
+      colorIndex,
+    };
+  }
 
         // Prepare next
         const nextIndex = Math.floor(Math.random() * CONFIG.colors.length);
@@ -1095,19 +1111,21 @@
 
       function update() {
         if (!shootingBubble) return;
+  
+  const displayWidth = canvas.width / (window.devicePixelRatio || 1);
 
-        // Move
-        shootingBubble.x += shootingBubble.vx;
-        shootingBubble.y += shootingBubble.vy;
+  // Move
+  shootingBubble.x += shootingBubble.vx;
+  shootingBubble.y += shootingBubble.vy;
 
-        // Wall bounce
-        if (shootingBubble.x <= CONFIG.bubbleRadius) {
-          shootingBubble.x = CONFIG.bubbleRadius;
-          shootingBubble.vx *= -1;
-        } else if (shootingBubble.x >= canvas.width - CONFIG.bubbleRadius) {
-          shootingBubble.x = canvas.width - CONFIG.bubbleRadius;
-          shootingBubble.vx *= -1;
-        }
+  // Wall bounce
+  if (shootingBubble.x <= CONFIG.bubbleRadius) {
+    shootingBubble.x = CONFIG.bubbleRadius;
+    shootingBubble.vx *= -1;
+  } else if (shootingBubble.x >= displayWidth - CONFIG.bubbleRadius) {  // ← Change ici
+    shootingBubble.x = displayWidth - CONFIG.bubbleRadius;  // ← Et ici
+    shootingBubble.vx *= -1;
+  }
 
         // Top collision
         if (shootingBubble.y <= CONFIG.bubbleRadius) {
@@ -1128,96 +1146,99 @@
         }
       }
 
-      function snapBubble() {
-        // Find grid position
-        const row = Math.max(
-          0,
-          Math.round(
-            (shootingBubble.y - CONFIG.bubbleRadius) /
-              (CONFIG.bubbleRadius * 1.73),
-          ),
-        );
-        const isOffset = row % 2 === 1;
-        const offset = isOffset ? CONFIG.bubbleRadius : 0;
-        const col = Math.round(
-          (shootingBubble.x - CONFIG.bubbleRadius - offset) /
-            (CONFIG.bubbleRadius * 2),
-        );
+function snapBubble() {
+  const displayWidth = canvas.width / (window.devicePixelRatio || 1);
+  const displayHeight = canvas.height / (window.devicePixelRatio || 1);
+  
+  // Find grid position
+  const row = Math.max(
+    0,
+    Math.round(
+      (shootingBubble.y - CONFIG.bubbleRadius) /
+        (CONFIG.bubbleRadius * 1.73),
+    ),
+  );
+  const isOffset = row % 2 === 1;
+  const offset = isOffset ? CONFIG.bubbleRadius : 0;
+  const col = Math.round(
+    (shootingBubble.x - CONFIG.bubbleRadius - offset) /
+      (CONFIG.bubbleRadius * 2),
+  );
 
-        const snappedX =
-          col * CONFIG.bubbleRadius * 2 + CONFIG.bubbleRadius + offset;
-        const snappedY = row * CONFIG.bubbleRadius * 1.73 + CONFIG.bubbleRadius;
+  const snappedX =
+    col * CONFIG.bubbleRadius * 2 + CONFIG.bubbleRadius + offset;
+  const snappedY = row * CONFIG.bubbleRadius * 1.73 + CONFIG.bubbleRadius;
 
-        const newBubble = {
-          x: Math.max(
-            CONFIG.bubbleRadius,
-            Math.min(canvas.width - CONFIG.bubbleRadius, snappedX),
-          ),
-          y: Math.max(CONFIG.bubbleRadius, snappedY),
-          color: shootingBubble.color,
-          emoji: shootingBubble.emoji,
-          colorIndex: shootingBubble.colorIndex,
-        };
+  const newBubble = {
+    x: Math.max(
+      CONFIG.bubbleRadius,
+      Math.min(displayWidth - CONFIG.bubbleRadius, snappedX),
+    ),
+    y: Math.max(CONFIG.bubbleRadius, snappedY),
+    color: shootingBubble.color,
+    emoji: shootingBubble.emoji,
+    colorIndex: shootingBubble.colorIndex,
+  };
 
-        bubbles.push(newBubble);
+  bubbles.push(newBubble);
 
-        // Find matches
-        const matches = findMatches(newBubble);
+  // Find matches
+  const matches = findMatches(newBubble);
 
-        if (matches.length >= 3) {
-          // Remove matches
-          for (let m of matches) {
-            const idx = bubbles.indexOf(m);
-            if (idx > -1) bubbles.splice(idx, 1);
-          }
+  if (matches.length >= 3) {
+    // Remove matches
+    for (let m of matches) {
+      const idx = bubbles.indexOf(m);
+      if (idx > -1) bubbles.splice(idx, 1);
+    }
 
-          const matchScore = matches.length * 15;
+    const matchScore = matches.length * 15;
 
-          // Remove floating
-          const floating = findFloating();
-          for (let f of floating) {
-            const idx = bubbles.indexOf(f);
-            if (idx > -1) bubbles.splice(idx, 1);
-          }
+    // Remove floating
+    const floating = findFloating();
+    for (let f of floating) {
+      const idx = bubbles.indexOf(f);
+      if (idx > -1) bubbles.splice(idx, 1);
+    }
 
-          const floatScore = floating.length * 25;
-          const totalGain = matchScore + floatScore;
+    const floatScore = floating.length * 25;
+    const totalGain = matchScore + floatScore;
 
-          score += totalGain;
-          levelScore += totalGain;
+    score += totalGain;
+    levelScore += totalGain;
 
-          updateUI();
+    updateUI();
 
-          // Check win
-          if (
-            levelScore >= CONFIG.levels[currentLevel].target ||
-            bubbles.length === 0
-          ) {
-            setTimeout(showLevelComplete, 400);
-            shootingBubble = null;
-            return;
-          }
-        }
+    // Check win
+    if (
+      levelScore >= CONFIG.levels[currentLevel].target ||
+      bubbles.length === 0
+    ) {
+      setTimeout(showLevelComplete, 400);
+      shootingBubble = null;
+      return;
+    }
+  }
 
-        // Check lose
-        const maxY =
-          bubbles.length > 0 ? Math.max(...bubbles.map((b) => b.y)) : 0;
-        if (maxY > canvas.height - 80) {
-          gameActive = false;
-          document.getElementById("final-score").textContent = score;
-          document.getElementById("game-over").classList.add("active");
-          shootingBubble = null;
-          return;
-        }
+  // Check lose
+  const maxY =
+    bubbles.length > 0 ? Math.max(...bubbles.map((b) => b.y)) : 0;
+  if (maxY > displayHeight - 80) {
+    gameActive = false;
+    document.getElementById("final-score").textContent = score;
+    document.getElementById("game-over").classList.add("active");
+    shootingBubble = null;
+    return;
+  }
 
-        // Next bubble
-        shootingBubble = null;
-        createShooterBubble();
+  // Next bubble
+  shootingBubble = null;
+  createShooterBubble();
 
-        setTimeout(() => {
-          canShoot = true;
-        }, 150);
-      }
+  setTimeout(() => {
+    canShoot = true;
+  }, 150);
+}
 
       function findMatches(start) {
         const matches = [start];
@@ -1291,17 +1312,19 @@
 
       // ============== RENDER ==============
       function render() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const displayWidth = canvas.width / (window.devicePixelRatio || 1);
+  const displayHeight = canvas.height / (window.devicePixelRatio || 1);
+        ctx.clearRect(0, 0, displayWidth, displayHeight);  // ← Change ici
 
-        // Danger line
-        ctx.beginPath();
-        ctx.strokeStyle = "rgba(200, 100, 100, 0.25)";
-        ctx.lineWidth = 1;
-        ctx.setLineDash([8, 8]);
-        ctx.moveTo(0, canvas.height - 80);
-        ctx.lineTo(canvas.width, canvas.height - 80);
-        ctx.stroke();
-        ctx.setLineDash([]);
+  // Danger line
+  ctx.beginPath();
+  ctx.strokeStyle = "rgba(200, 100, 100, 0.25)";
+  ctx.lineWidth = 1;
+  ctx.setLineDash([8, 8]);
+  ctx.moveTo(0, displayHeight - 80);  // ← Change ici
+  ctx.lineTo(displayWidth, displayHeight - 80);  // ← Change ici
+  ctx.stroke();
+  ctx.setLineDash([]);
 
         // Grid bubbles
         for (let bubble of bubbles) {
